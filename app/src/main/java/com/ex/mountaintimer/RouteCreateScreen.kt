@@ -7,10 +7,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,7 +46,6 @@ private enum class EditTarget {
  * 2. 在地圖上設定起點（點兩下 A/B）、自訂點 1-10、終點
  * 3. 按「完成」儲存
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RouteCreateScreen(
     onBack: () -> Unit,
@@ -156,21 +151,34 @@ fun RouteCreateScreen(
         // 第一步：輸入路線名稱
         // ============================================================
         CreateStep.NAME -> {
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text("新增路線") },
-                        navigationIcon = {
-                            IconButton(onClick = onBack) {
-                                Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
-                            }
+            Column(modifier = Modifier.fillMaxSize()) {
+                // 頂部列
+                Surface(
+                    tonalElevation = 3.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onBack) {
+                            Text("← 返回")
                         }
-                    )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            "新增路線",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.width(64.dp))
+                    }
                 }
-            ) { pad ->
+
                 Column(
                     modifier = Modifier
-                        .padding(pad)
                         .fillMaxSize()
                         .padding(24.dp),
                     verticalArrangement = Arrangement.Center,
@@ -346,11 +354,7 @@ fun RouteCreateScreen(
                             containerColor = Color(0xFFFF5252),
                             modifier = Modifier.size(48.dp)
                         ) {
-                            Icon(
-                                Icons.Filled.Undo,
-                                contentDescription = "取消",
-                                tint = Color.White
-                            )
+                            Text("↩", color = Color.White, fontSize = 20.sp)
                         }
                     }
 
@@ -390,11 +394,7 @@ fun RouteCreateScreen(
                             containerColor = Color(0xFF4CAF50),
                             modifier = Modifier.size(48.dp)
                         ) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = "確認",
-                                tint = Color.White
-                            )
+                            Text("✓", color = Color.White, fontSize = 20.sp)
                         }
                     }
                 }

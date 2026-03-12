@@ -39,12 +39,12 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
-    // Compose BOM（統一版本）
-    implementation(platform("androidx.compose:compose-bom:2024.04.01"))
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.04.01"))
+    // Compose BOM（降版本，修 API 22 上 SlotTable crash）
+    implementation(platform("androidx.compose:compose-bom:2024.01.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.01.00"))
 
     // Compose 基本元件
-    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
@@ -58,10 +58,10 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 
-    // Google Maps & Location（每個只宣告一次）
-    implementation("com.google.android.gms:play-services-location:21.3.0")
+    // Google Maps & Location
+    implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.google.maps.android:maps-compose:4.4.1")
+    implementation("com.google.maps.android:maps-compose:4.3.3")
     implementation("com.google.maps.android:maps-compose-utils:4.3.3")
 
     // Room

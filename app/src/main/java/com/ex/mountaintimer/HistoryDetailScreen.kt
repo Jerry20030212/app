@@ -3,8 +3,6 @@ package com.ex.mountaintimer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,7 +26,6 @@ import java.util.Locale
  * - 標示所有自訂點的位置
  * - 顯示分段時間
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryDetailScreen(
     runId: Long,
@@ -51,7 +48,6 @@ fun HistoryDetailScreen(
         splitTimes = historyRepo.getSplitTimes(runId)
         trackPoints = historyRepo.getTrackPoints(runId)
 
-        // 載入路線的 Gate（用來在地圖上標示）
         val result = runResult
         if (result != null) {
             val routeWithGates = routeRepo.getRouteWithGates(result.routeId)
@@ -61,21 +57,20 @@ fun HistoryDetailScreen(
 
     val run = runResult
 
-    // 計算軌跡的中心點和 Polyline
+    // 計算軌跡的中心點
     val trackLatLngs = trackPoints.map { LatLng(it.lat, it.lng) }
     val centerLatLng = if (trackLatLngs.isNotEmpty()) {
         val avgLat = trackLatLngs.map { it.latitude }.average()
         val avgLng = trackLatLngs.map { it.longitude }.average()
         LatLng(avgLat, avgLng)
     } else {
-        LatLng(25.034, 121.564) // 預設台北
+        LatLng(25.034, 121.564)
     }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(centerLatLng, 15f)
     }
 
-    // 當軌跡載入後更新鏡頭
     LaunchedEffect(trackLatLngs) {
         if (trackLatLngs.isNotEmpty()) {
             val avgLat = trackLatLngs.map { it.latitude }.average()
@@ -85,33 +80,43 @@ fun HistoryDetailScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(run?.routeName ?: "紀錄詳情") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
-        }
-    ) { pad ->
-        Box(
-            modifier = Modifier
-                .padding(pad)
-                .fillMaxSize()
+    Column(modifier = Modifier.fillMaxSize()) {
+        // ---- 頂部列 ----
+        Surface(
+            tonalElevation = 3.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            if (run == null) {
-                // 載入中
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onBack) {
+                    Text("← 返回")
                 }
-            } else {
-                // ---- 地圖 ----
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    run?.routeName ?: "紀錄詳情",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(64.dp))
+            }
+        }
+
+        // ---- 地圖 + 資訊 ----
+        if (run == null) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // 地圖
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState
@@ -129,8 +134,7 @@ fun HistoryDetailScreen(
                     if (trackLatLngs.isNotEmpty()) {
                         Marker(
                             state = MarkerState(position = trackLatLngs.first()),
-                            title = "起點",
-                            snippet = "開始位置"
+                            title = "起點"
                         )
                     }
 
@@ -138,8 +142,7 @@ fun HistoryDetailScreen(
                     if (trackLatLngs.size >= 2) {
                         Marker(
                             state = MarkerState(position = trackLatLngs.last()),
-                            title = "終點",
-                            snippet = "結束位置"
+                            title = "終點"
                         )
                     }
 
@@ -148,7 +151,7 @@ fun HistoryDetailScreen(
                         val gateColor = when (g.type) {
                             "START" -> Color.Green
                             "FINISH" -> Color.Red
-                            else -> Color(0xFFFF9800) // 橘
+                            else -> Color(0xFFFF9800)
                         }
                         Polyline(
                             points = listOf(
@@ -159,7 +162,7 @@ fun HistoryDetailScreen(
                             width = 10f
                         )
 
-                        // 自訂點標記（顯示在 Gate 中點）
+                        // 自訂點標記
                         if (g.type == "CUSTOM") {
                             val midLat = (g.aLat + g.bLat) / 2
                             val midLng = (g.aLng + g.bLng) / 2
@@ -180,10 +183,12 @@ fun HistoryDetailScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .background(Color(0xEE000000), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .background(
+                            Color(0xEE000000),
+                            RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                        )
                         .padding(16.dp)
                 ) {
-                    // 路線名 + 日期
                     Text(
                         text = run.routeName,
                         color = Color.White,
@@ -198,7 +203,6 @@ fun HistoryDetailScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // 總時間
                     Text(
                         text = "總時間: ${formatMs(run.totalTimeMs)}",
                         color = Color(0xFF4CAF50),
@@ -206,10 +210,9 @@ fun HistoryDetailScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    // 分段時間
                     if (splitTimes.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        HorizontalDivider(color = Color(0xFF555555))
+                        Divider(color = Color(0xFF555555))
                         Spacer(modifier = Modifier.height(8.dp))
 
                         splitTimes.forEach { split ->

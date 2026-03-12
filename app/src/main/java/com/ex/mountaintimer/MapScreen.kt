@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableLongStateOf
@@ -478,7 +478,7 @@ fun MapScreen(
                 onClick = onOpenRouteList,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Filled.Route, contentDescription = "選擇路線")
+                Icon(Icons.Filled.List, contentDescription = "選擇路線")
             }
 
             // 歷史紀錄
