@@ -146,10 +146,10 @@ fun MapScreen(
     val trackPoints = remember { mutableStateListOf<LatLng>() }
     val rawTrackPoints = remember { mutableStateListOf<TrackPointEntity>() }
 
-    // ---- 方向箭頭 Descriptor ----
-    val arrowDescriptor: BitmapDescriptor = remember {
-        BitmapDescriptorFactory.fromBitmap(createArrowBitmap())
-    }
+    // ---- 方向箭頭 Bitmap（先建 Bitmap，等 Map 初始化後再轉 Descriptor）----
+    val arrowBitmap = remember { createArrowBitmap() }
+    var arrowDescriptor by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var mapLoaded by remember { mutableStateOf(false) }
 
     // ---- 顯示訊息 ----
     var statusMessage by remember { mutableStateOf("") }
@@ -329,18 +329,33 @@ fun MapScreen(
         // ---- 地圖 ----
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
+            cameraPositionState = cameraPositionState,
+            onMapLoaded = {
+                if (!mapLoaded) {
+                    mapLoaded = true
+                    arrowDescriptor = BitmapDescriptorFactory.fromBitmap(arrowBitmap)
+                }
+            }
         ) {
             // 方向箭頭（使用者位置）
             currentPoint?.let { p ->
-                Marker(
-                    state = MarkerState(position = LatLng(p.lat, p.lng)),
-                    icon = arrowDescriptor,
-                    rotation = p.bearing,
-                    anchor = androidx.compose.ui.geometry.Offset(0.5f, 0.5f),
-                    flat = true,
-                    title = "你的位置"
-                )
+                val desc = arrowDescriptor
+                if (desc != null) {
+                    Marker(
+                        state = MarkerState(position = LatLng(p.lat, p.lng)),
+                        icon = desc,
+                        rotation = p.bearing,
+                        anchor = androidx.compose.ui.geometry.Offset(0.5f, 0.5f),
+                        flat = true,
+                        title = "你的位置"
+                    )
+                } else {
+                    // Map 還沒完全載入，先用預設 Marker
+                    Marker(
+                        state = MarkerState(position = LatLng(p.lat, p.lng)),
+                        title = "你的位置"
+                    )
+                }
             }
 
             // 軌跡（藍）
