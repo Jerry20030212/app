@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.Cap
+import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -251,9 +253,26 @@ fun MapScreen(
                 )
             }
 
-            // 軌跡（藍）— 只在 RUN
+            // 軌跡（Google Maps 導航風格）— 只在 RUN
             if (uiModeState.value == UiMode.RUN && trackPoints.size >= 2) {
-                Polyline(points = trackPoints, color = Color.Blue, width = 8f)
+                // 底色邊框（淺藍色，較寬）
+                Polyline(
+                    points = trackPoints,
+                    color = Color(0xFF81D4FA),
+                    width = 25f,
+                    startCap = Cap.RoundCap(),
+                    endCap = Cap.RoundCap(),
+                    jointType = JointType.ROUND
+                )
+                // 主色線條（深藍色，填滿中央）
+                Polyline(
+                    points = trackPoints,
+                    color = Color(0xFF1976D2),
+                    width = 18f,
+                    startCap = Cap.RoundCap(),
+                    endCap = Cap.RoundCap(),
+                    jointType = JointType.ROUND
+                )
             }
 
             // 暫存 Gate（紫）
