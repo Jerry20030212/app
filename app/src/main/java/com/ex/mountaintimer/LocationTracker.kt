@@ -6,6 +6,7 @@ import com.google.android.gms.location.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 
 /**
  * GPS 定位追蹤器
@@ -19,23 +20,41 @@ object LocationTracker {
 
         val request = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            1000L // 1秒
+            500L
         )
-            .setMinUpdateIntervalMillis(500L)
-            .setWaitForAccurateLocation(false)
+            .setMinUpdateIntervalMillis(200L)
+            .setMaxUpdateDelayMillis(0L)
+            .setMinUpdateDistanceMeters(0f)
+            .setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
+            .setWaitForAccurateLocation(true)
             .build()
+
+        // 嘗試獲取最後已知位置作為初始值
+        runCatching {
+            client.lastLocation.await()
+        }.getOrNull()?.let { loc ->
+            trySend(
+                GeoPoint(
+                    lat = loc.latitude,
+                    lng = loc.longitude,
+                    bearing = if (loc.hasBearing()) loc.bearing else 0f,
+                    speed = if (loc.hasSpeed()) loc.speed else 0f
+                )
+            )
+        }
 
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
-                val loc = result.lastLocation ?: return
-                trySend(
-                    GeoPoint(
-                        lat = loc.latitude,
-                        lng = loc.longitude,
-                        bearing = if (loc.hasBearing()) loc.bearing else 0f,
-                        speed = if (loc.hasSpeed()) loc.speed else 0f
+                result.locations.forEach { loc ->
+                    trySend(
+                        GeoPoint(
+                            lat = loc.latitude,
+                            lng = loc.longitude,
+                            bearing = if (loc.hasBearing()) loc.bearing else 0f,
+                            speed = if (loc.hasSpeed()) loc.speed else 0f
+                        )
                     )
-                )
+                }
             }
         }
 
