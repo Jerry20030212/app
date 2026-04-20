@@ -97,6 +97,9 @@ fun MapScreen(
         )
     }
 
+    // ✅ 記錄是否已經完成初始定位，避免每次更新位置都強制跳轉
+    var hasInitializedCamera by remember { mutableStateOf(false) }
+
     // ✅ RUN 模式時鏡頭跟著目前位置，編輯模式時保留手動移圖空間
     LaunchedEffect(hasPermission) {
         if (!hasPermission) return@LaunchedEffect
@@ -104,6 +107,12 @@ fun MapScreen(
         LocationTracker.locationFlow(context).collectLatest { p ->
             currentPoint = p
             val latLng = LatLng(p.lat, p.lng)
+
+            // 第一次取得定位時，直接「跳轉」到該位置，解決開機看到全東亞的問題
+            if (!hasInitializedCamera) {
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(latLng, 17f)
+                hasInitializedCamera = true
+            }
 
             if (uiModeState.value == UiMode.RUN) {
                 val lastPoint = trackPoints.lastOrNull()
