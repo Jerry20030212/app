@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
 private enum class UiMode { RUN, EDIT_GATE }
 private enum class EditingTarget { START, CUSTOM, FINISH }
 
-private fun formatMs(ms: Long): String {
+internal fun formatMs(ms: Long): String {
     val totalSeconds = ms / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
@@ -54,7 +54,8 @@ private fun formatMs(ms: Long): String {
 @Composable
 fun MapScreen(
     selectedRouteId: Long?,
-    onOpenRouteList: () -> Unit
+    onOpenRouteList: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     val context = LocalContext.current
     val repo = remember { RouteRepository(context) }
@@ -316,6 +317,7 @@ fun MapScreen(
             when (uiModeState.value) {
                 UiMode.RUN -> {
                     Button(onClick = onOpenRouteList) { Text("選擇路線") }
+                    Button(onClick = onOpenHistory) { Text("歷史紀錄") }
 
                     Button(onClick = {
                         uiModeState.value = UiMode.EDIT_GATE
