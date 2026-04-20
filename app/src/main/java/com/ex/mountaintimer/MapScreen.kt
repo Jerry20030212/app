@@ -32,6 +32,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.Cap
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
@@ -260,8 +261,8 @@ fun MapScreen(
                     points = trackPoints,
                     color = Color(0xFF81D4FA),
                     width = 25f,
-                    startCap = Cap.RoundCap(),
-                    endCap = Cap.RoundCap(),
+                    startCap = RoundCap(),
+                    endCap = RoundCap(),
                     jointType = JointType.ROUND
                 )
                 // 主色線條（深藍色，填滿中央）
@@ -269,8 +270,8 @@ fun MapScreen(
                     points = trackPoints,
                     color = Color(0xFF1976D2),
                     width = 18f,
-                    startCap = Cap.RoundCap(),
-                    endCap = Cap.RoundCap(),
+                    startCap = RoundCap(),
+                    endCap = RoundCap(),
                     jointType = JointType.ROUND
                 )
             }
