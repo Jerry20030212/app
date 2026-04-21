@@ -5,17 +5,44 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -326,124 +353,218 @@ fun MapScreen(
             }
         }
 
-        // HUD（左上）
-        Column(
+        // --- 全新設計的 HUD (頂部) ---
+        Box(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(12.dp)
-                .background(Color(0xAA000000))
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 40.dp, start = 16.dp, end = 16.dp)
+                .fillMaxWidth()
         ) {
-            Text("目前路線：$routeName", color = Color.White)
-            Text(hintText, color = Color.White)
-            Text("時間：${formatMs(elapsedMs)}", color = Color.White)
-        }
-
-        // 右上角按鈕群
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            when (uiModeState.value) {
-                UiMode.RUN -> {
-                    Button(onClick = onOpenRouteList) { Text("選擇路線") }
-                    Button(onClick = onOpenHistory) { Text("歷史紀錄") }
-
-                    Button(onClick = {
-                        uiModeState.value = UiMode.EDIT_GATE
-                        editingTarget = EditingTarget.START
-                        customIndex = 1
-                        editA = null
-                        editB = null
-                        isRunning = false
-                    }) {
-                        Text("+ 編輯路線")
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xCC121212)),
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = routeName.ifEmpty { "未選擇路線" },
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = hintText,
+                            color = Color(0xFFB0BEC5),
+                            fontSize = 12.sp
+                        )
                     }
-
-                    Button(onClick = {
-                        if (!isRunning) {
-                            isRunning = true
-                            startedAtMs = nowMs
-                        }
-                    }) { Text("開始計時") }
-
-                    OutlinedButton(onClick = { isRunning = false }) { Text("停止") }
-                }
-
-                UiMode.EDIT_GATE -> {
-                    // ✅ 取消目前 Gate：只清暫存，不動已畫好的線
-                    OutlinedButton(onClick = {
-                        editA = null
-                        editB = null
-                    }) { Text("取消目前Gate") }
-
-                    // ✅ (可選) 刪除上一個自訂點：只刪橘線最後一條，不動起點/終點
-                    if (editingTarget == EditingTarget.CUSTOM && customGates.isNotEmpty()) {
-                        OutlinedButton(onClick = {
-                            customGates.removeAt(customGates.lastIndex)
-                            customIndex = (customIndex - 1).coerceAtLeast(1)
-                            Toast.makeText(context, "已刪除上一個自訂點", Toast.LENGTH_SHORT).show()
-                        }) { Text("刪除上一個自訂點") }
-                    }
-
-                    // ✅ 完成這條（把紫線存成綠/橘/紅其中之一）
-                    Button(
-                        enabled = (editA != null && editB != null),
-                        onClick = {
-                            val a = editA ?: return@Button
-                            val b = editB ?: return@Button
-
-                            val gate = Gate(
-                                a = GeoPoint(a.latitude, a.longitude),
-                                b = GeoPoint(b.latitude, b.longitude)
+                    
+                    // 計時器顯示
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = formatMs(elapsedMs),
+                            color = if (isRunning) Color(0xFF00E676) else Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                        if (isRunning) {
+                            Text(
+                                text = "RECORDING",
+                                color = Color(0xFFFF5252),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
                             )
-
-                            when (editingTarget) {
-                                EditingTarget.START -> {
-                                    startGate = gate
-                                    editingTarget = EditingTarget.CUSTOM
-                                    customIndex = 1
-                                }
-
-                                EditingTarget.CUSTOM -> {
-                                    customGates.add(gate)
-                                    customIndex += 1
-                                }
-
-                                EditingTarget.FINISH -> {
-                                    finishGate = gate
-                                }
-                            }
-
-                            editA = null
-                            editB = null
                         }
-                    ) { Text("完成這條") }
-
-                    // ✅ 你說你畫完自訂點後「看不到終點」：這顆就是答案
-                    if (editingTarget == EditingTarget.CUSTOM) {
-                        OutlinedButton(onClick = {
-                            editingTarget = EditingTarget.FINISH
-                            editA = null
-                            editB = null
-                        }) { Text("下一步：畫終點") }
                     }
-
-                    // ✅ 如果終點已畫好：可以存
-                    if (finishGate != null && startGate != null) {
-                        Button(onClick = { saveCurrentRoute() }) { Text("儲存路線") }
-                    }
-
-                    OutlinedButton(onClick = {
-                        uiModeState.value = UiMode.RUN
-                        editA = null
-                        editB = null
-                    }) { Text("回跑山") }
                 }
             }
         }
+
+        // --- 全新設計的控制列 (底部) ---
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+                .fillMaxWidth()
+        ) {
+            when (uiModeState.value) {
+                UiMode.RUN -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 路線按鈕
+                        ControlButton(icon = Icons.Default.List, label = "路線", onClick = onOpenRouteList)
+                        
+                        // 開始/停止按鈕 (核心按鈕)
+                        Box(
+                            modifier = Modifier
+                                .size(84.dp)
+                                .shadow(12.dp, CircleShape)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        if (isRunning) listOf(Color(0xFFFF5252), Color(0xFFD32F2F))
+                                        else listOf(Color(0xFF2196F3), Color(0xFF1976D2))
+                                    )
+                                )
+                                .clickable {
+                                    if (isRunning) {
+                                        isRunning = false
+                                    } else {
+                                        isRunning = true
+                                        startedAtMs = nowMs
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+
+                        // 歷史按鈕
+                        ControlButton(icon = Icons.Default.History, label = "歷史", onClick = onOpenHistory)
+                        
+                        // 編輯按鈕
+                        ControlButton(icon = Icons.Default.Add, label = "編輯", onClick = {
+                            uiModeState.value = UiMode.EDIT_GATE
+                            editingTarget = EditingTarget.START
+                            customIndex = 1
+                            editA = null
+                            editB = null
+                            isRunning = false
+                        })
+                    }
+                }
+
+                UiMode.EDIT_GATE -> {
+                    // 編輯模式的簡約控制台
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xCC121212)),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "編輯模式: ${when(editingTarget){
+                                    EditingTarget.START -> "起點"
+                                    EditingTarget.CUSTOM -> "自訂點 $customIndex"
+                                    EditingTarget.FINISH -> "終點"
+                                }}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    modifier = Modifier.weight(1f),
+                                    enabled = (editA != null && editB != null),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                                    onClick = {
+                                        val a = editA ?: return@Button
+                                        val b = editB ?: return@Button
+                                        val gate = Gate(GeoPoint(a.latitude, a.longitude), GeoPoint(b.latitude, b.longitude))
+                                        when (editingTarget) {
+                                            EditingTarget.START -> { startGate = gate; editingTarget = EditingTarget.CUSTOM }
+                                            EditingTarget.CUSTOM -> { customGates.add(gate); customIndex += 1 }
+                                            EditingTarget.FINISH -> { finishGate = gate }
+                                        }
+                                        editA = null; editB = null
+                                    }
+                                ) { Text("完成此段") }
+
+                                if (editingTarget == EditingTarget.CUSTOM) {
+                                    Button(
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { editingTarget = EditingTarget.FINISH; editA = null; editB = null }
+                                    ) { Text("去畫終點") }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                if (finishGate != null && startGate != null) {
+                                    Button(
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                                        onClick = { saveCurrentRoute() }
+                                    ) { Text("儲存路線") }
+                                }
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { uiModeState.value = UiMode.RUN; editA = null; editB = null }
+                                ) { Text("返回", color = Color.White) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ControlButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(Color(0xAA212121))
+                .border(1.dp, Color(0x33FFFFFF), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = Color.White)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+    }
+}
     }
 }
