@@ -134,6 +134,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
     val scope = rememberCoroutineScope()
 
     var language by remember { mutableStateOf(AppLanguage.TW) }
+    var mapType by remember { mutableStateOf(MapType.SATELLITE) }
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
     
     DisposableEffect(language) {
@@ -241,7 +242,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     trackPoints.clear(); trackPoints.add(curr); passedCustomGateIndices = emptySet(); splitTimes.clear()
                     speak("timing_start")
                     // Log start data
-                    splitTimes.add(SplitTimeEntity(runId = 0, checkpointIndex = 0, checkpointName = "START", timeMs = 0, speed = p.speed, gForce = sqrt(p.gX.pow(2) + p.gY.pow(2))))
+                    splitTimes.add(SplitTimeEntity(runId = 0, checkpointIndex = 0, checkpointName = "START", timeMs = 0, speed = p.speed.toDouble(), gForce = sqrt(p.gX.toDouble().pow(2) + p.gY.toDouble().pow(2))))
                 }
 
                 if (isRunning) {
@@ -258,8 +259,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                                 checkpointIndex = index + 1, 
                                 checkpointName = "CUSTOM ${index + 1}", 
                                 timeMs = System.currentTimeMillis() - startedAtMs,
-                                speed = p.speed,
-                                gForce = sqrt(p.gX.pow(2) + p.gY.pow(2))
+                                speed = p.speed.toDouble(),
+                                gForce = sqrt(p.gX.toDouble().pow(2) + p.gY.toDouble().pow(2))
                             ))
                         }
                     }
@@ -274,8 +275,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                             checkpointIndex = 99, 
                             checkpointName = "FINISH", 
                             timeMs = finalMs,
-                            speed = p.speed,
-                            gForce = sqrt(p.gX.pow(2) + p.gY.pow(2))
+                            speed = p.speed.toDouble(),
+                            gForce = sqrt(p.gX.toDouble().pow(2) + p.gY.toDouble().pow(2))
                         ))
                         scope.launch {
                             historyRepo.saveRunResult(
@@ -299,7 +300,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
-            properties = MapProperties(isMyLocationEnabled = hasPermission, mapType = MapType.SATELLITE)
+            properties = MapProperties(isMyLocationEnabled = hasPermission, mapType = mapType)
         ) {
             if (selectedRouteId != null) {
                 startGate?.let { GateMarker(it, Strings.get("gate_start", language)) }
@@ -343,29 +344,47 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     val statusColor by animateColorAsState(if (isRunning) Color(0xFFF44336) else Color.White)
                     Text(statusText, color = statusColor, fontSize = 16.sp)
                 }
-                // Language Switcher
-                LanguageSwitcher(current = language, onSwitch = { language = it })
+                // Settings Menu (Language & Map Type)
+                SettingsMenu(
+                    currentLang = language,
+                    onLangChange = { language = it },
+                    currentMapType = mapType,
+                    onMapTypeChange = { mapType = it }
+                )
             }
 
             // Bottom section: Timer, Speed, G-Force
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Timer and Controls
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(formatMs(elapsedMs), color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Bold)
-                    Row {
+                // Timer and Controls (Left Side)
+                Column(modifier = Modifier.weight(1.2f)) {
+                    // Use softWrap and maxLines to prevent timer from pushing other elements
+                    Text(
+                        text = formatMs(elapsedMs),
+                        color = Color.White,
+                        fontSize = 56.sp, // Slightly reduced to ensure fit
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
                         ControlButton(Icons.AutoMirrored.Filled.List, Strings.get("btn_routes", language)) { onOpenRouteList() }
                         Spacer(Modifier.width(8.dp))
                         ControlButton(Icons.Default.History, Strings.get("btn_history", language)) { onOpenHistory() }
                     }
                 }
-                // Speed and G-Force
-                Column(horizontalAlignment = Alignment.End) {
+                
+                // Speed and G-Force (Right Side)
+                Column(
+                    modifier = Modifier.weight(0.8f),
+                    horizontalAlignment = Alignment.End
+                ) {
                     Speedometer(speedKmh = currentPoint?.speed?.times(3.6)?.toFloat() ?: 0f)
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(12.dp))
                     GForceMeter(gX = currentPoint?.gX ?: 0f, gY = currentPoint?.gY ?: 0f)
                 }
             }
@@ -374,18 +393,53 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
 }
 
 @Composable
-internal fun LanguageSwitcher(current: AppLanguage, onSwitch: (AppLanguage) -> Unit) {
-    val languages = AppLanguage.entries.toTypedArray()
-    val nextLang = languages[(current.ordinal + 1) % languages.size]
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable { onSwitch(nextLang) },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(current.name, color = Color.White, fontWeight = FontWeight.Bold)
+internal fun SettingsMenu(
+    currentLang: AppLanguage,
+    onLangChange: (AppLanguage) -> Unit,
+    currentMapType: MapType,
+    onMapTypeChange: (MapType) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable { expanded = true },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color.DarkGray)
+        ) {
+            // Language Selection
+            Text("Language", color = Color.Gray, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontSize = 12.sp)
+            AppLanguage.entries.forEach { lang ->
+                DropdownMenuItem(
+                    text = { Text(lang.name, color = if (currentLang == lang) Color.Cyan else Color.White) },
+                    onClick = { onLangChange(lang); expanded = false }
+                )
+            }
+            
+            Divider(color = Color.Gray.copy(alpha = 0.5f))
+            
+            // Map Type Selection
+            Text("Map Type", color = Color.Gray, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontSize = 12.sp)
+            DropdownMenuItem(
+                text = { Text("Satellite", color = if (currentMapType == MapType.SATELLITE) Color.Cyan else Color.White) },
+                onClick = { onMapTypeChange(MapType.SATELLITE); expanded = false }
+            )
+            DropdownMenuItem(
+                text = { Text("Normal", color = if (currentMapType == MapType.NORMAL) Color.Cyan else Color.White) },
+                onClick = { onMapTypeChange(MapType.NORMAL); expanded = false }
+            )
+        }
     }
 }
 
