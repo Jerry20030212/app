@@ -6,7 +6,9 @@ data class GeoPoint(
     val lat: Double,
     val lng: Double,
     val bearing: Float = 0f,      // 行進方向（度，0=北）
-    val speed: Float = 0f         // 速度（m/s）
+    val speed: Float = 0f,        // 速度（m/s）
+    val gX: Float = 0f,           // 橫向 G 力 (Lateral)
+    val gY: Float = 0f            // 縱向 G 力 (Longitudinal)
 )
 
 data class Gate(

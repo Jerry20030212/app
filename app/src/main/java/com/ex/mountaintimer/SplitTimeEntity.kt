@@ -16,5 +16,7 @@ data class SplitTimeEntity(
     val runId: Long,
     val checkpointIndex: Int,     // 對應 Checkpoint.index
     val checkpointName: String,   // 對應 Checkpoint.name
-    val timeMs: Long              // 從起點開始計算的時間（ms）
+    val timeMs: Long,             // 從起點開始計算的時間（ms）
+    val speed: Float = 0f,        // 通過時的速度 (m/s)
+    val gForce: Float = 0f        // 通過時的總 G 力
 )
