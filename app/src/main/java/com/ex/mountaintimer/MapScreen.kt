@@ -36,7 +36,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -95,7 +94,8 @@ fun MapScreen(
     onOpenHistory: () -> Unit
 ) {
     val context = LocalContext.current
-    val repo = remember { RouteRepository(context) }
+    val routeRepo = remember { RouteRepository(context) }
+    val historyRepo = remember { HistoryRepository(context) }
     val scope = rememberCoroutineScope()
 
     // --- TTS 語音引擎 ---
@@ -151,7 +151,7 @@ fun MapScreen(
 
     // --- 讀取路線 ---
     LaunchedEffect(selectedRouteId) {
-        val r = if (selectedRouteId == null) null else repo.getRouteWithGates(selectedRouteId)
+        val r = if (selectedRouteId == null) null else routeRepo.getRouteWithGates(selectedRouteId)
         if (r != null) {
             routeName = r.route.name
             startGate = null; customGates.clear(); finishGate = null
@@ -225,11 +225,20 @@ fun MapScreen(
                     // D. 穿越終點偵測
                     if (prev != null && isCrossingGate(prev, curr, gateFinishA, gateFinishB)) {
                         isRunning = false
-                        val finalTime = formatMs(System.currentTimeMillis() - startedAtMs)
-                        speak("抵達終點，成績為 $finalTime")
+                        val finalTimeMs = System.currentTimeMillis() - startedAtMs
+                        val finalTimeStr = formatMs(finalTimeMs)
+                        speak("抵達終點，成績為 $finalTimeStr")
                         // 自動存檔
                         scope.launch {
-                            repo.saveHistory(selectedRouteId ?: 0L, System.currentTimeMillis() - startedAtMs, trackPoints.map { GeoPoint(it.latitude, it.longitude) })
+                            historyRepo.saveRunResult(
+                                routeId = selectedRouteId ?: 0L,
+                                routeName = routeName,
+                                startTimeEpoch = startedAtMs,
+                                endTimeEpoch = System.currentTimeMillis(),
+                                totalTimeMs = finalTimeMs,
+                                splits = emptyList(), // 暫不實作分段存檔
+                                trackPoints = trackPoints.map { TrackPointEntity(runId = 0, lat = it.latitude, lng = it.longitude, timestampMs = 0) }
+                            )
                         }
                     }
                 }
@@ -258,13 +267,13 @@ fun MapScreen(
             customGates.forEach { g -> Polyline(listOf(LatLng(g.a.lat, g.a.lng), LatLng(g.b.lat, g.b.lng)), color = Color(0xFFFF9800), width = 12f) }
             finishGate?.let { g -> Polyline(listOf(LatLng(g.a.lat, g.a.lng), LatLng(g.b.lat, g.b.lng)), color = Color.Red, width = 12f) }
             // 編輯中的 Marker
-            editA?.let { Marker(MarkerState(it), title = "Gate A") }
-            editB?.let { Marker(MarkerState(it), title = "Gate B") }
+            editA?.let { Marker(state = MarkerState(position = it), title = "Gate A") }
+            editB?.let { Marker(state = MarkerState(position = it), title = "Gate B") }
         }
 
         // --- HUD (頂部) ---
         Column(modifier = Modifier.align(Alignment.TopCenter).padding(top = 40.dp, start = 16.dp, end = 16.dp).fillMaxWidth()) {
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xCC121212)), shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(8.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xCC121212)), shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)) {
                 Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(routeName.ifEmpty { "尚未選擇路線" }, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -288,9 +297,9 @@ fun MapScreen(
         Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp, start = 16.dp, end = 16.dp).fillMaxWidth()) {
             if (uiModeState.value == UiMode.RUN) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    ControlButton(Icons.Default.List, "路線清單", onOpenRouteList)
-                    ControlButton(Icons.Default.History, "歷史紀錄", onOpenHistory)
-                    ControlButton(Icons.Default.Add, "新增路線", { uiModeState.value = UiMode.EDIT_GATE; editingTarget = EditingTarget.START; editA = null; editB = null })
+                    ControlButton(icon = Icons.Default.List, label = "路線清單", onClick = onOpenRouteList)
+                    ControlButton(icon = Icons.Default.History, label = "歷史紀錄", onClick = onOpenHistory)
+                    ControlButton(icon = Icons.Default.Add, label = "新增路線", onClick = { uiModeState.value = UiMode.EDIT_GATE; editingTarget = EditingTarget.START; editA = null; editB = null })
                 }
             } else {
                 // 編輯模式卡片
@@ -313,7 +322,7 @@ fun MapScreen(
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             if (startGate != null && finishGate != null) Button(Modifier.weight(1f), onClick = { 
-                                scope.launch { repo.saveRoute(routeName.ifEmpty { "新路線" }, startGate!!, customGates.toList(), finishGate!!); speak("路線已儲存"); uiModeState.value = UiMode.RUN }
+                                scope.launch { routeRepo.saveRoute(routeName.ifEmpty { "新路線" }, startGate!!, customGates.toList(), finishGate!!); speak("路線已儲存"); uiModeState.value = UiMode.RUN }
                             }) { Text("儲存路線") }
                             OutlinedButton(Modifier.weight(1f), onClick = { uiModeState.value = UiMode.RUN }) { Text("取消", color = Color.White) }
                         }
