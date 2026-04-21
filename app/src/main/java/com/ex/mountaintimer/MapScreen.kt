@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,9 +42,9 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.*
 
-private enum class UiMode { RUN, EDIT_GATE }
-private enum class EditingTarget { START, CUSTOM, FINISH }
-private enum class AppLanguage { EN, TW, JP }
+internal enum class UiMode { RUN, EDIT_GATE }
+internal enum class EditingTarget { START, CUSTOM, FINISH }
+internal enum class AppLanguage { EN, TW, JP }
 
 // Multi-language strings
 private object Strings {
@@ -165,8 +166,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
     var startGate by remember { mutableStateOf<Gate?>(null) }
     val customGates = remember { mutableStateListOf<Gate>() }
     var finishGate by remember { mutableStateOf<Gate?>(null) }
-    var editingTarget by remember { mutableStateOf(EditingTarget.START) }
-    var customIndex by remember { mutableStateOf(1) }
+    // var editingTarget by remember { mutableStateOf(EditingTarget.START) }
+    // var customIndex by remember { mutableStateOf(1) }
 
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var startedAtMs by remember { mutableLongStateOf(0L) }
@@ -356,7 +357,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                 Column(modifier = Modifier.weight(1f)) {
                     Text(formatMs(elapsedMs), color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Bold)
                     Row {
-                        ControlButton(Icons.Default.List, Strings.get("btn_routes", language)) { onOpenRouteList() }
+                        ControlButton(Icons.AutoMirrored.Filled.List, Strings.get("btn_routes", language)) { onOpenRouteList() }
                         Spacer(Modifier.width(8.dp))
                         ControlButton(Icons.Default.History, Strings.get("btn_history", language)) { onOpenHistory() }
                     }
@@ -373,8 +374,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
 }
 
 @Composable
-fun LanguageSwitcher(current: AppLanguage, onSwitch: (AppLanguage) -> Unit) {
-    val languages = AppLanguage.values()
+internal fun LanguageSwitcher(current: AppLanguage, onSwitch: (AppLanguage) -> Unit) {
+    val languages = AppLanguage.entries.toTypedArray()
     val nextLang = languages[(current.ordinal + 1) % languages.size]
     Box(
         modifier = Modifier
