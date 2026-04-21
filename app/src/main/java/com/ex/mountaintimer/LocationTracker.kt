@@ -20,9 +20,9 @@ object LocationTracker {
 
         val request = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            500L
+            100L
         )
-            .setMinUpdateIntervalMillis(200L)
+            .setMinUpdateIntervalMillis(100L)
             .setMaxUpdateDelayMillis(0L)
             .setMinUpdateDistanceMeters(0f)
             .setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
