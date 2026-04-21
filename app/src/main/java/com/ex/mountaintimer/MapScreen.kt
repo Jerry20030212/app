@@ -317,14 +317,14 @@ fun MapScreen(
                                 }
                                 editA = null; editB = null
                             }) { Text("完成此段") }
-                            if (editingTarget == EditingTarget.CUSTOM) Button(Modifier.weight(1f), onClick = { editingTarget = EditingTarget.FINISH; editA = null; editB = null }) { Text("去畫終點") }
+                            if (editingTarget == EditingTarget.CUSTOM) Button(modifier = Modifier.weight(1f), onClick = { editingTarget = EditingTarget.FINISH; editA = null; editB = null }) { Text("去畫終點") }
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (startGate != null && finishGate != null) Button(Modifier.weight(1f), onClick = { 
+                            if (startGate != null && finishGate != null) Button(modifier = Modifier.weight(1f), onClick = { 
                                 scope.launch { routeRepo.saveRoute(routeName.ifEmpty { "新路線" }, startGate!!, customGates.toList(), finishGate!!); speak("路線已儲存"); uiModeState.value = UiMode.RUN }
                             }) { Text("儲存路線") }
-                            OutlinedButton(Modifier.weight(1f), onClick = { uiModeState.value = UiMode.RUN }) { Text("取消", color = Color.White) }
+                            OutlinedButton(modifier = Modifier.weight(1f), onClick = { uiModeState.value = UiMode.RUN }) { Text("取消", color = Color.White) }
                         }
                     }
                 }
