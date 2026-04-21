@@ -45,7 +45,7 @@ private enum class UiMode { RUN, EDIT_GATE }
 private enum class EditingTarget { START, CUSTOM, FINISH }
 private enum class AppLanguage { EN, TW, JP }
 
-// 多語言對照表
+// Multi-language strings
 private object Strings {
     fun get(key: String, lang: AppLanguage): String = when (lang) {
         AppLanguage.TW -> when (key) {
@@ -172,7 +172,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
     var startedAtMs by remember { mutableLongStateOf(0L) }
     var isRunning by remember { mutableStateOf(false) }
     var lastDistanceToStart by remember { mutableDoubleStateOf(Double.MAX_VALUE) }
-    val passedCustomGateIndices = remember { mutableStateSetOf<Int>() }
+    var passedCustomGateIndices by remember { mutableStateOf(setOf<Int>()) }
     val splitTimes = remember { mutableStateListOf<SplitTimeEntity>() }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -201,7 +201,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     "FINISH" -> finishGate = gate
                 }
             }
-            isRunning = false; trackPoints.clear(); lastDistanceToStart = Double.MAX_VALUE; passedCustomGateIndices.clear()
+            isRunning = false; trackPoints.clear(); lastDistanceToStart = Double.MAX_VALUE; passedCustomGateIndices = emptySet()
         }
     }
 
@@ -237,20 +237,20 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
 
                 if (!isRunning && prev != null && isCrossingGate(prev, curr, gSA, gSB)) {
                     isRunning = true; startedAtMs = System.currentTimeMillis()
-                    trackPoints.clear(); trackPoints.add(curr); passedCustomGateIndices.clear(); splitTimes.clear()
+                    trackPoints.clear(); trackPoints.add(curr); passedCustomGateIndices = emptySet(); splitTimes.clear()
                     speak("timing_start")
-                    // 記錄起點數據
+                    // Log start data
                     splitTimes.add(SplitTimeEntity(runId = 0, checkpointIndex = 0, checkpointName = "START", timeMs = 0, speed = p.speed, gForce = sqrt(p.gX.pow(2) + p.gY.pow(2))))
                 }
 
                 if (isRunning) {
                     if (trackPoints.isEmpty() || trackPoints.last() != curr) trackPoints.add(curr)
                     
-                    // 自訂點偵測
+                    // Custom gate detection
                     customGates.forEachIndexed { index, gate ->
                         if (!passedCustomGateIndices.contains(index) && prev != null && 
                             isCrossingGate(prev, curr, LatLng(gate.a.lat, gate.a.lng), LatLng(gate.b.lat, gate.b.lng))) {
-                            passedCustomGateIndices.add(index)
+                            passedCustomGateIndices = passedCustomGateIndices + index
                             speak("passed_custom")
                             splitTimes.add(SplitTimeEntity(
                                 runId = 0, 
@@ -263,6 +263,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         }
                     }
 
+                    // Finish gate detection
                     if (prev != null && isCrossingGate(prev, curr, gFA, gFB)) {
                         isRunning = false
                         val finalMs = System.currentTimeMillis() - startedAtMs
@@ -292,128 +293,166 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = hasPermission, mapType = MapType.TERRAIN),
-            uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
+            uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
+            properties = MapProperties(isMyLocationEnabled = hasPermission, mapType = MapType.SATELLITE)
         ) {
-            if (trackPoints.size >= 2) {
-                Polyline(points = trackPoints.toList(), color = Color(0xFF81D4FA), width = 25f, startCap = RoundCap(), endCap = RoundCap(), jointType = JointType.ROUND)
-                Polyline(points = trackPoints.toList(), color = Color(0xFF1976D2), width = 18f, startCap = RoundCap(), endCap = RoundCap(), jointType = JointType.ROUND)
+            if (selectedRouteId != null) {
+                startGate?.let { GateMarker(it, Strings.get("gate_start", language)) }
+                finishGate?.let { GateMarker(it, Strings.get("gate_finish", language)) }
+                customGates.forEachIndexed { i, g -> GateMarker(g, "${Strings.get("gate_custom", language)} ${i + 1}") }
+                if (isRunning && trackPoints.size >= 2) {
+                    Polyline(
+                        points = trackPoints.toList(),
+                        color = Color(0xFF4285F4),
+                        width = 20f,
+                        startCap = RoundCap(),
+                        endCap = RoundCap(),
+                        jointType = JointType.ROUND
+                    )
+                }
             }
-            startGate?.let { g -> Polyline(listOf(LatLng(g.a.lat, g.a.lng), LatLng(g.b.lat, g.b.lng)), color = Color.Green, width = 12f) }
-            customGates.forEach { g -> Polyline(listOf(LatLng(g.a.lat, g.a.lng), LatLng(g.b.lat, g.b.lng)), color = Color.Yellow, width = 10f) }
-            finishGate?.let { g -> Polyline(listOf(LatLng(g.a.lat, g.a.lng), LatLng(g.b.lat, g.b.lng)), color = Color.Red, width = 12f) }
         }
 
-        // --- 頂部 HUD ---
-        Column(Modifier.align(Alignment.TopCenter).padding(top = 48.dp, start = 16.dp, end = 16.dp).fillMaxWidth()) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xCC121212)),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth()
+        // Main HUD
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .statusBarsPadding()
+                .safeDrawingPadding(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Top section: Route name and status
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(routeName.ifEmpty { Strings.get("gate_start", language) }, color = Color.White, fontSize = 14.sp)
-                        Text(formatMs(elapsedMs), color = if(isRunning) Color(0xFF00E676) else Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black)
-                        if (isRunning) Text(Strings.get("status_recording", language), color = Color.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        else Text(Strings.get("status_ready", language), color = Color.Gray, fontSize = 10.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(routeName, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    val statusText = when {
+                        selectedRouteId == null -> Strings.get("hint_select", language)
+                        isRunning -> Strings.get("status_recording", language)
+                        else -> Strings.get("status_ready", language)
                     }
-                    
-                    // 時速表
-                    Column(horizontalAlignment = Alignment.End) {
-                        val speedKmh = ((currentPoint?.speed ?: 0f) * 3.6f).toInt()
-                        Text("$speedKmh", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Bold)
-                        Text("km/h", color = Color.Gray, fontSize = 12.sp)
-                    }
+                    val statusColor by animateColorAsState(if (isRunning) Color(0xFFF44336) else Color.White)
+                    Text(statusText, color = statusColor, fontSize = 16.sp)
                 }
+                // Language Switcher
+                LanguageSwitcher(current = language, onSwitch = { language = it })
             }
-            
-            Spacer(Modifier.height(12.dp))
-            
-            // G-Force & Language Row
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                GForceMeter(currentPoint?.gX ?: 0f, currentPoint?.gY ?: 0f)
-                
-                // 語言切換按鈕
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xCC121212)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.clickable { 
-                        language = when(language) {
-                            AppLanguage.TW -> AppLanguage.EN
-                            AppLanguage.EN -> AppLanguage.JP
-                            AppLanguage.JP -> AppLanguage.TW
-                        }
-                    }
-                ) {
-                    Text(language.name, color = Color.White, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontWeight = FontWeight.Bold)
-                }
-            }
-        }
 
-        if (selectedRouteId == null && uiModeState.value == UiMode.RUN) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xAA000000)), shape = RoundedCornerShape(16.dp)) {
-                    Text(Strings.get("hint_select", language), color = Color.White, modifier = Modifier.padding(24.dp), textAlign = TextAlign.Center)
+            // Bottom section: Timer, Speed, G-Force
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Timer and Controls
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(formatMs(elapsedMs), color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Bold)
+                    Row {
+                        ControlButton(Icons.Default.List, Strings.get("btn_routes", language)) { onOpenRouteList() }
+                        Spacer(Modifier.width(8.dp))
+                        ControlButton(Icons.Default.History, Strings.get("btn_history", language)) { onOpenHistory() }
+                    }
+                }
+                // Speed and G-Force
+                Column(horizontalAlignment = Alignment.End) {
+                    Speedometer(speedKmh = currentPoint?.speed?.times(3.6)?.toFloat() ?: 0f)
+                    Spacer(Modifier.height(16.dp))
+                    GForceMeter(gX = currentPoint?.gX ?: 0f, gY = currentPoint?.gY ?: 0f)
                 }
             }
         }
+    }
+}
 
-        // --- 底部控制列 ---
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp, start = 16.dp, end = 16.dp).fillMaxWidth()) {
-            if (uiModeState.value == UiMode.RUN) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    ControlButton(Icons.Default.List, Strings.get("btn_routes", language), onOpenRouteList)
-                    ControlButton(Icons.Default.History, Strings.get("btn_history", language), onOpenHistory)
-                    ControlButton(Icons.Default.Add, Strings.get("btn_add", language)) { 
-                        uiModeState.value = UiMode.EDIT_GATE; editingTarget = EditingTarget.START
-                    }
-                }
-            } else {
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xEE121212)), shape = RoundedCornerShape(24.dp)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("編輯: ${when(editingTarget){ EditingTarget.START->Strings.get("gate_start", language); EditingTarget.CUSTOM->"${Strings.get("gate_custom", language)} $customIndex"; EditingTarget.FINISH->Strings.get("gate_finish", language) }}", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("請在地圖上點擊兩點來畫出通過線", color = Color.Gray, fontSize = 12.sp)
-                        Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(modifier = Modifier.weight(1f), onClick = { uiModeState.value = UiMode.RUN }) { Text("取消") }
-                        }
-                    }
-                }
-            }
-        }
+@Composable
+fun LanguageSwitcher(current: AppLanguage, onSwitch: (AppLanguage) -> Unit) {
+    val languages = AppLanguage.values()
+    val nextLang = languages[(current.ordinal + 1) % languages.size]
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onSwitch(nextLang) },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(current.name, color = Color.White, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun ControlButton(icon: ImageVector, text: String, onClick: () -> Unit) {
+    Button(onClick = onClick, colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.5f))) {
+        Icon(icon, contentDescription = text, tint = Color.White)
+        Spacer(Modifier.width(4.dp))
+        Text(text, color = Color.White)
+    }
+}
+
+@Composable
+fun Speedometer(speedKmh: Float) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(
+            text = "%.0f".format(speedKmh),
+            color = Color.White,
+            fontSize = 72.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.End
+        )
+        Text(
+            text = "km/h",
+            color = Color.White,
+            fontSize = 24.sp,
+            modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
+        )
     }
 }
 
 @Composable
 fun GForceMeter(gX: Float, gY: Float) {
-    Box(Modifier.size(80.dp).background(Color(0xCC121212), CircleShape).border(1.dp, Color(0x33FFFFFF), CircleShape), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(60.dp)) {
-            val center = Offset(size.width / 2, size.height / 2)
-            drawCircle(Color.Gray, radius = size.width / 2, style = Stroke(1f))
-            drawCircle(Color.Gray, radius = size.width / 4, style = Stroke(1f))
-            drawLine(Color.Gray, Offset(0f, center.y), Offset(size.width, center.y), 1f)
-            drawLine(Color.Gray, Offset(center.x, 0f), Offset(center.x, size.height), 1f)
+    val maxG = 2.0f
+    val clampedGx = gX.coerceIn(-maxG, maxG)
+    val clampedGy = gY.coerceIn(-maxG, maxG)
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(120.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.5f))
+            .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) { 
+            val center = this.center
+            val radius = size.minDimension / 2.0f
             
-            val posX = (center.x + (gX * (size.width / 2))).coerceIn(0f, size.width)
-            val posY = (center.y - (gY * (size.height / 2))).coerceIn(0f, size.height)
-            drawCircle(Color(0xFF00E676), radius = 6f, center = Offset(posX, posY))
+            // Grid lines
+            drawLine(Color.White.copy(alpha = 0.3f), Offset(center.x, 0f), Offset(center.x, size.height), strokeWidth = 1f)
+            drawLine(Color.White.copy(alpha = 0.3f), Offset(0f, center.y), Offset(size.width, center.y), strokeWidth = 1f)
+            drawCircle(Color.White.copy(alpha = 0.3f), radius = radius / 2, style = Stroke(width = 1f))
+
+            // G-Force point
+            val pointOffset = Offset(
+                center.x + (clampedGx / maxG) * radius,
+                center.y - (clampedGy / maxG) * radius // Y is inverted in Canvas
+            )
+            drawCircle(Brush.radialGradient(listOf(Color.Red, Color.Transparent), center = pointOffset, radius = 8.dp.toPx()), radius = 8.dp.toPx(), center = pointOffset)
         }
-        Text("G", color = Color(0x66FFFFFF), fontSize = 10.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
+        Text("G", color = Color.White.copy(alpha = 0.7f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun ControlButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
-        Box(Modifier.size(56.dp).clip(CircleShape).background(Color(0xCC212121)).border(1.dp, Color(0x33FFFFFF), CircleShape), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Color.White)
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = Color.White, fontSize = 10.sp)
-    }
+fun GateMarker(gate: Gate, title: String) {
+    val center = LatLng((gate.a.lat + gate.b.lat) / 2, (gate.a.lng + gate.b.lng) / 2)
+    Marker(state = MarkerState(position = center), title = title, snippet = "Gate")
+    Polyline(points = listOf(LatLng(gate.a.lat, gate.a.lng), LatLng(gate.b.lat, gate.b.lng)), color = Color.Yellow, width = 10f)
 }
