@@ -319,73 +319,101 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
             }
         }
 
-        // Main HUD
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .statusBarsPadding()
-                .safeDrawingPadding(),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Top section: Route name and status
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(routeName, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    val statusText = when {
-                        selectedRouteId == null -> Strings.get("hint_select", language)
-                        isRunning -> Strings.get("status_recording", language)
-                        else -> Strings.get("status_ready", language)
-                    }
-                    val statusColor by animateColorAsState(if (isRunning) Color(0xFFF44336) else Color.White)
-                    Text(statusText, color = statusColor, fontSize = 16.sp)
-                }
-                // Settings Menu (Language & Map Type)
-                SettingsMenu(
-                    currentLang = language,
-                    onLangChange = { language = it },
-                    currentMapType = mapType,
-                    onMapTypeChange = { mapType = it }
-                )
-            }
-
-            // Bottom section: Timer, Speed, G-Force
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Timer and Controls (Left Side)
-                Column(modifier = Modifier.weight(1.2f)) {
-                    // Use softWrap and maxLines to prevent timer from pushing other elements
-                    Text(
-                        text = formatMs(elapsedMs),
-                        color = Color.White,
-                        fontSize = 56.sp, // Slightly reduced to ensure fit
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        softWrap = false
+        // --- HUD Overlay with Background Gradients for Visibility ---
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Top Scrim (Dark gradient from top)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)
+                        )
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        ControlButton(Icons.AutoMirrored.Filled.List, Strings.get("btn_routes", language)) { onOpenRouteList() }
-                        Spacer(Modifier.width(8.dp))
-                        ControlButton(Icons.Default.History, Strings.get("btn_history", language)) { onOpenHistory() }
-                    }
-                }
-                
-                // Speed and G-Force (Right Side)
-                Column(
-                    modifier = Modifier.weight(0.8f),
-                    horizontalAlignment = Alignment.End
+            )
+
+            // Bottom Scrim (Dark gradient from bottom)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                        )
+                    )
+            )
+
+            // Main HUD Content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .statusBarsPadding()
+                    .safeDrawingPadding(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Top section: Route name and status
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Speedometer(speedKmh = currentPoint?.speed?.times(3.6)?.toFloat() ?: 0f)
-                    Spacer(Modifier.height(12.dp))
-                    GForceMeter(gX = currentPoint?.gX ?: 0f, gY = currentPoint?.gY ?: 0f)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(routeName, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        val statusText = when {
+                            selectedRouteId == null -> Strings.get("hint_select", language)
+                            isRunning -> Strings.get("status_recording", language)
+                            else -> Strings.get("status_ready", language)
+                        }
+                        val statusColor by animateColorAsState(if (isRunning) Color(0xFFF44336) else Color.White)
+                        Text(statusText, color = statusColor, fontSize = 16.sp)
+                    }
+                    // Settings Menu (Language & Map Type)
+                    SettingsMenu(
+                        currentLang = language,
+                        onLangChange = { language = it },
+                        currentMapType = mapType,
+                        onMapTypeChange = { mapType = it }
+                    )
+                }
+
+                // Bottom section: Timer, Speed, G-Force
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Timer and Controls (Left Side)
+                    Column(modifier = Modifier.weight(1.3f)) {
+                        // Further reduced size and added shadow for maximum visibility
+                        Text(
+                            text = formatMs(elapsedMs),
+                            color = Color.White,
+                            fontSize = 48.sp, // Reduced from 56 to 48
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            ControlButton(Icons.AutoMirrored.Filled.List, Strings.get("btn_routes", language)) { onOpenRouteList() }
+                            Spacer(Modifier.width(8.dp))
+                            ControlButton(Icons.Default.History, Strings.get("btn_history", language)) { onOpenHistory() }
+                        }
+                    }
+                    
+                    // Speed and G-Force (Right Side)
+                    Column(
+                        modifier = Modifier.weight(0.7f),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Speedometer(speedKmh = currentPoint?.speed?.times(3.6)?.toFloat() ?: 0f)
+                        Spacer(Modifier.height(8.dp))
+                        GForceMeter(gX = currentPoint?.gX ?: 0f, gY = currentPoint?.gY ?: 0f)
+                    }
                 }
             }
         }
