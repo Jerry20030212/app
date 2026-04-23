@@ -182,9 +182,16 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
     var vehicleModel by remember { mutableStateOf("") }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        hasPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        // Android 12+ requires handling both fine and coarse location
+        hasPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true || 
+                        result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     }
-    LaunchedEffect(Unit) { permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)) }
+    LaunchedEffect(Unit) { 
+        permissionLauncher.launch(arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )) 
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
