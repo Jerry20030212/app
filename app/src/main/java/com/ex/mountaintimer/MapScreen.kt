@@ -424,12 +424,11 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     }
                     
                     Row(
-                        modifier = Modifier.weight(if (isLandscape) 1.5f else 0.8f),
-                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.wrapContentWidth(), // Let it take only what it needs
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.Bottom
                     ) {
                         Speedometer(speedKmh = currentPoint?.speed?.times(3.6)?.toFloat() ?: 0f)
-                        Spacer(Modifier.width(if (isLandscape) 32.dp else 20.dp))
                         GForceMeter(gX = currentPoint?.gX ?: 0f, gY = currentPoint?.gY ?: 0f)
                     }
                 }
@@ -548,10 +547,10 @@ fun Speedometer(speedKmh: Float) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(80.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.Black.copy(alpha = 0.3f))
-            .padding(4.dp)
+            .width(90.dp) // Fixed width to prevent stretching
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.4f))
+            .padding(vertical = 8.dp, horizontal = 4.dp)
     ) {
         Text(
             "%.0f".format(speedKmh),
@@ -575,15 +574,15 @@ fun GForceMeter(gX: Float, gY: Float) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(80.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.Black.copy(alpha = 0.3f))
-            .padding(4.dp)
+            .width(90.dp) // Fixed width to prevent stretching
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.4f))
+            .padding(vertical = 8.dp, horizontal = 4.dp)
     ) {
-        // G-Ball Visualization
+        // G-Ball Visualization (Ensured to be square/circle)
         Box(
             modifier = Modifier
-                .size(50.dp)
+                .size(60.dp) // Slightly larger and fixed size
                 .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
