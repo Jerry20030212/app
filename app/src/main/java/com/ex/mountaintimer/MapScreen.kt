@@ -361,11 +361,11 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         Text(routeName, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         val statusText = when {
                             selectedRouteId == null -> Strings.get("hint_select", language)
@@ -386,14 +386,13 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.Bottom
                 ) {
                     Column(modifier = Modifier.wrapContentWidth()) {
                         Text(
                             text = formatMs(elapsedMs),
                             color = Color.White,
-                            fontSize = if (isLandscape) 40.sp else 48.sp,
+                            fontSize = if (isLandscape) 40.sp else 44.sp,
                             fontWeight = FontWeight.Black,
                             maxLines = 1,
                             softWrap = false
@@ -403,17 +402,17 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                             IconButton(
                                 onClick = onOpenRouteList,
                                 modifier = Modifier
-                                    .size(if (isLandscape) 48.dp else 56.dp)
+                                    .size(if (isLandscape) 44.dp else 52.dp)
                                     .clip(CircleShape)
                                     .background(Color.Black.copy(alpha = 0.5f))
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Routes", tint = Color.White)
                             }
-                            Spacer(Modifier.width(16.dp))
+                            Spacer(Modifier.width(12.dp))
                             IconButton(
                                 onClick = onOpenHistory,
                                 modifier = Modifier
-                                    .size(if (isLandscape) 48.dp else 56.dp)
+                                    .size(if (isLandscape) 44.dp else 52.dp)
                                     .clip(CircleShape)
                                     .background(Color.Black.copy(alpha = 0.5f))
                             ) {
@@ -422,9 +421,11 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         }
                     }
                     
+                    Spacer(modifier = Modifier.weight(1f))
+                    
                     Row(
                         modifier = Modifier.wrapContentWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.Bottom
                     ) {
                         Speedometer(speedKmh = currentPoint?.speed?.times(3.6)?.toFloat() ?: 0f)
@@ -545,10 +546,10 @@ fun Speedometer(speedKmh: Float) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(90.dp)
+            .requiredWidth(85.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color.Black.copy(alpha = 0.4f))
-            .padding(vertical = 8.dp, horizontal = 4.dp)
+            .padding(vertical = 6.dp, horizontal = 2.dp)
     ) {
         Text(
             "%.0f".format(speedKmh),
@@ -572,14 +573,14 @@ fun GForceMeter(gX: Float, gY: Float) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(90.dp)
+            .requiredWidth(85.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color.Black.copy(alpha = 0.4f))
-            .padding(vertical = 8.dp, horizontal = 4.dp)
+            .padding(vertical = 6.dp, horizontal = 2.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(60.dp)
+                .requiredSize(50.dp)
                 .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
