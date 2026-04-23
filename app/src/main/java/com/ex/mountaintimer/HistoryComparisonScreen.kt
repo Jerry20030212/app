@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -31,7 +32,7 @@ fun HistoryComparisonScreen(
     LaunchedEffect(runIds) {
         val data = runIds.mapNotNull { id ->
             val run = historyRepo.getRunResult(id)
-            val splits = historyRepo.getSplitTimesForRun(id)
+            val splits = historyRepo.getSplitTimes(id)
             if (run != null) run to splits else null
         }
         runsData = data
@@ -89,16 +90,16 @@ fun HistoryComparisonScreen(
                 for (i in 0 until maxSplits) {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
-                            val gateName = runsData.firstOrNull { it.second.size > i }?.second?.get(i)?.gateName ?: "Gate ${i+1}"
+                            val gateName = runsData.firstOrNull { it.second.size > i }?.second?.get(i)?.checkpointName ?: "Gate ${i+1}"
                             Text(gateName, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.height(8.dp))
                             
                             ComparisonRow("通過時間", runsData.map { 
-                                if (i < it.second.size) formatMs(it.second[i].elapsedMs) else "N/A"
+                                if (i < it.second.size) formatMs(it.second[i].timeMs) else "N/A"
                             }, colors)
                             Spacer(Modifier.height(4.dp))
                             ComparisonRow("當下時速", runsData.map { 
-                                if (i < it.second.size) "%.1f km/h".format(it.second[i].speedKmh) else "N/A"
+                                if (i < it.second.size) "%.1f km/h".format(it.second[i].speed * 3.6) else "N/A"
                             }, colors)
                             Spacer(Modifier.height(4.dp))
                             ComparisonRow("最大G值", runsData.map { 
