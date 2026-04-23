@@ -52,7 +52,7 @@ internal enum class AppLanguage { EN, TW, JP }
 private object Strings {
     fun get(key: String, lang: AppLanguage): String = when (lang) {
         AppLanguage.TW -> when (key) {
-            "hint_select" -> "🏁 請選擇路線或點擊右下角新增路線"
+            "hint_select" -> "🏁 請點擊左下角選擇路線或新增路線"
             "status_ready" -> "已就緒，通過起點將自動計時"
             "status_recording" -> "● 錄製中"
             "gate_start" -> "起點"
@@ -68,7 +68,7 @@ private object Strings {
             else -> key
         }
         AppLanguage.EN -> when (key) {
-            "hint_select" -> "🏁 Please select a route or add a new one"
+            "hint_select" -> "🏁 Please tap the bottom-left icon to select or add a route"
             "status_ready" -> "Ready, timing starts at the Start Gate"
             "status_recording" -> "● RECORDING"
             "gate_start" -> "Start"
@@ -84,7 +84,7 @@ private object Strings {
             else -> key
         }
         AppLanguage.JP -> when (key) {
-            "hint_select" -> "🏁 ルートを選択するか、新しく追加してください"
+            "hint_select" -> "🏁 左下のアイコンをタップしてルートを選択または追加してください"
             "status_ready" -> "準備完了、スタート地点で計測開始"
             "status_recording" -> "● 記録中"
             "gate_start" -> "スタート"
@@ -140,6 +140,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
     var language by rememberSaveable { mutableStateOf(AppLanguage.TW) }
     var mapType by rememberSaveable { mutableStateOf(MapType.SATELLITE) }
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+    var showReportDialog by remember { mutableStateOf(false) }
     
     DisposableEffect(language) {
         val ttsEngine = TextToSpeech(context) { status ->
@@ -379,7 +380,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         currentLang = language,
                         onLangChange = { language = it },
                         currentMapType = mapType,
-                        onMapTypeChange = { mapType = it }
+                        onMapTypeChange = { mapType = it },
+                        onReportIssue = { showReportDialog = true }
                     )
                 }
 
@@ -433,7 +435,49 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                 }
             }
         }
+
+        if (showReportDialog) {
+            ReportIssueDialog(
+                onDismiss = { showReportDialog = false },
+                onSubmit = { issue ->
+                    // Here you would typically send to Firebase
+                    android.widget.Toast.makeText(context, "Issue reported: $issue", android.widget.Toast.LENGTH_LONG).show()
+                    showReportDialog = false
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun ReportIssueDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Report Issue / Feedback") },
+        text = {
+            Column {
+                Text("Please describe the bug or suggestion:", fontSize = 14.sp)
+                Spacer(Modifier.height(8.dp))
+                TextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth().height(150.dp),
+                    placeholder = { Text("Type here...") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { if (text.isNotBlank()) onSubmit(text) }) {
+                Text("Submit")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -441,7 +485,8 @@ internal fun SettingsMenu(
     currentLang: AppLanguage,
     onLangChange: (AppLanguage) -> Unit,
     currentMapType: MapType,
-    onMapTypeChange: (MapType) -> Unit
+    onMapTypeChange: (MapType) -> Unit,
+    onReportIssue: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -478,6 +523,12 @@ internal fun SettingsMenu(
             DropdownMenuItem(
                 text = { Text("Satellite", color = if (currentMapType == MapType.SATELLITE) Color.Cyan else Color.White) },
                 onClick = { onMapTypeChange(MapType.SATELLITE); expanded = false }
+            )
+            Divider(color = Color.Gray)
+            DropdownMenuItem(
+                text = { Text("Report Issue", color = Color.Yellow) },
+                leadingIcon = { Icon(Icons.Default.BugReport, contentDescription = null, tint = Color.Yellow) },
+                onClick = { onReportIssue(); expanded = false }
             )
         }
     }
