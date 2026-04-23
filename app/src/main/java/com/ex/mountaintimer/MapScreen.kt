@@ -439,8 +439,14 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
             ReportIssueDialog(
                 onDismiss = { showReportDialog = false },
                 onSubmit = { issue ->
-                    android.widget.Toast.makeText(context, "Issue reported: $issue", android.widget.Toast.LENGTH_LONG).show()
-                    showReportDialog = false
+                    FirebaseManager.reportIssue(issue) { success ->
+                        if (success) {
+                            android.widget.Toast.makeText(context, "回報已送出，我們將盡快處理！", android.widget.Toast.LENGTH_LONG).show()
+                            showReportDialog = false
+                        } else {
+                            android.widget.Toast.makeText(context, "送出失敗 (請確認 Firebase 已設定)", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }
                 }
             )
         }
