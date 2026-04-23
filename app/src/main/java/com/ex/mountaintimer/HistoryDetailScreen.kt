@@ -155,7 +155,7 @@ fun HistoryDetailScreen(
                         Text(formatMs(split.timeMs), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray.copy(alpha = 0.5f))
+                Divider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray.copy(alpha = 0.5f))
             }
             
             Spacer(Modifier.height(32.dp))
@@ -198,23 +198,27 @@ fun exportGpx(context: Context, run: RunResultEntity, points: List<TrackPointEnt
     
     try {
         val resolver = context.contentResolver
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.MediaColumns.MIME_TYPE, "application/gpx+xml")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-        }
-        
-        val uri: Uri? = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-        uri?.let {
-            val outputStream: OutputStream? = resolver.openOutputStream(it)
-            outputStream?.use { os ->
-                os.write(gpxContent.toByteArray())
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "application/gpx+xml")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             }
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            uri?.let {
+                resolver.openOutputStream(it)?.use { os ->
+                    os.write(gpxContent.toByteArray())
+                }
+                Toast.makeText(context, "GPX 已儲存至下載資料夾", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            // API < 29: Use traditional file storage
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val file = java.io.File(downloadsDir, fileName)
+            file.writeBytes(gpxContent.toByteArray())
             Toast.makeText(context, "GPX 已儲存至下載資料夾", Toast.LENGTH_LONG).show()
-        } ?: run {
-            Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
         }
     } catch (e: Exception) {
-        Toast.makeText(context, "錯誤: ${e.message}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "儲存失敗: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
