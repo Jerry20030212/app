@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -129,12 +131,14 @@ fun isCrossingGate(prev: LatLng, curr: LatLng, gateA: LatLng, gateB: LatLng): Bo
 @Composable
 fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory: () -> Unit) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val routeRepo = remember { RouteRepository(context) }
     val historyRepo = remember { HistoryRepository(context) }
     val scope = rememberCoroutineScope()
 
-    var language by remember { mutableStateOf(AppLanguage.TW) }
-    var mapType by remember { mutableStateOf(MapType.SATELLITE) }
+    var language by rememberSaveable { mutableStateOf(AppLanguage.TW) }
+    var mapType by rememberSaveable { mutableStateOf(MapType.SATELLITE) }
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
     
     DisposableEffect(language) {
@@ -394,25 +398,24 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 32.dp else 12.dp)
                 ) {
                     // Timer and Controls (Left Side)
-                    Column(modifier = Modifier.weight(1.3f)) {
-                        // Further reduced size and added shadow for maximum visibility
+                    Column(modifier = Modifier.weight(if (isLandscape) 1.5f else 1.3f)) {
                         Text(
                             text = formatMs(elapsedMs),
                             color = Color.White,
-                            fontSize = 48.sp,
+                            fontSize = if (isLandscape) 40.sp else 48.sp, // Landscape mode uses slightly smaller font
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             softWrap = false
                         )
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(if (isLandscape) 4.dp else 12.dp))
                         Row(modifier = Modifier.fillMaxWidth()) {
                             IconButton(
                                 onClick = onOpenRouteList,
                                 modifier = Modifier
-                                    .size(56.dp)
+                                    .size(if (isLandscape) 48.dp else 56.dp)
                                     .clip(CircleShape)
                                     .background(Color.Black.copy(alpha = 0.5f))
                             ) {
@@ -422,7 +425,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                             IconButton(
                                 onClick = onOpenHistory,
                                 modifier = Modifier
-                                    .size(56.dp)
+                                    .size(if (isLandscape) 48.dp else 56.dp)
                                     .clip(CircleShape)
                                     .background(Color.Black.copy(alpha = 0.5f))
                             ) {
@@ -432,12 +435,13 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     }
                     
                     // Speed and G-Force (Right Side)
-                    Column(
-                        modifier = Modifier.weight(0.7f),
-                        horizontalAlignment = Alignment.End
+                    Row(
+                        modifier = Modifier.weight(if (isLandscape) 1.5f else 0.7f),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.Bottom
                     ) {
                         Speedometer(speedKmh = currentPoint?.speed?.times(3.6)?.toFloat() ?: 0f)
-                        Spacer(Modifier.height(8.dp))
+                        if (isLandscape) Spacer(Modifier.width(24.dp)) else Spacer(Modifier.height(8.dp))
                         GForceMeter(gX = currentPoint?.gX ?: 0f, gY = currentPoint?.gY ?: 0f)
                     }
                 }

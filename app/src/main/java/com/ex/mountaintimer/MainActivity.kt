@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.ex.mountaintimer.ui.theme.MountainTimerTheme
 
 /**
@@ -31,9 +32,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MountainTimerTheme(dynamicColor = false) {
-                var screen by remember { mutableStateOf(Screen.MAP) }
-                var selectedRouteId by remember { mutableStateOf<Long?>(null) }
-                var selectedHistoryId by remember { mutableStateOf<Long?>(null) }
+                var screen by rememberSaveable { mutableStateOf(Screen.MAP) }
+                var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
+                var selectedHistoryId by rememberSaveable { mutableStateOf<Long?>(null) }
 
                 when (screen) {
                     Screen.MAP -> {
