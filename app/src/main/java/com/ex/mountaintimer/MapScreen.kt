@@ -171,8 +171,6 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
     var startGate by remember { mutableStateOf<Gate?>(null) }
     val customGates = remember { mutableStateListOf<Gate>() }
     var finishGate by remember { mutableStateOf<Gate?>(null) }
-    // var editingTarget by remember { mutableStateOf(EditingTarget.START) }
-    // var customIndex by remember { mutableStateOf(1) }
 
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var startedAtMs by remember { mutableLongStateOf(0L) }
@@ -248,7 +246,6 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     isRunning = true; startedAtMs = System.currentTimeMillis()
                     trackPoints.clear(); trackPoints.add(curr); passedCustomGateIndices = emptySet(); splitTimes.clear(); totalDistanceM = 0.0
                     speak("timing_start")
-                    // Log start data
                     splitTimes.add(SplitTimeEntity(runId = 0, checkpointIndex = 0, checkpointName = "START", timeMs = 0, speed = p.speed.toDouble(), gForce = sqrt(p.gX.toDouble().pow(2) + p.gY.toDouble().pow(2))))
                 }
 
@@ -260,7 +257,6 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         trackPoints.add(curr)
                     }
                     
-                    // Custom gate detection
                     customGates.forEachIndexed { index, gate ->
                         if (!passedCustomGateIndices.contains(index) && prev != null && 
                             isCrossingGate(prev, curr, LatLng(gate.a.lat, gate.a.lng), LatLng(gate.b.lat, gate.b.lng))) {
@@ -277,8 +273,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         }
                     }
 
-                    // Finish gate detection
-                    if (prev != null && isCrossingGate(p                        val finalMs = System.currentTimeMillis() - startedAtMs
+                    if (prev != null && isCrossingGate(prev, curr, gFA, gFB)) {
+                        val finalMs = System.currentTimeMillis() - startedAtMs
                         isRunning = false
                         speak("passed_finish")
                         splitTimes.add(SplitTimeEntity(
@@ -303,7 +299,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                                 splits = splitTimes.toList(),
                                 trackPoints = trackPoints.map { TrackPointEntity(runId = 0, lat = it.latitude, lng = it.longitude, timestampMs = System.currentTimeMillis()) }
                             )
-                        }                    }
+                        }
+                    }
                 }
             }
         }
@@ -333,34 +330,21 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
             }
         }
 
-        // --- HUD Overlay with Background Gradients for Visibility ---
         Box(modifier = Modifier.fillMaxSize()) {
-            // Top Scrim (Dark gradient from top)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)
-                        )
-                    )
+                    .background(Brush.verticalGradient(colors = listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
             )
-
-            // Bottom Scrim (Dark gradient from bottom)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
                     .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
-                        )
-                    )
+                    .background(Brush.verticalGradient(colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
             )
 
-            // Main HUD Content
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -369,7 +353,6 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     .safeDrawingPadding(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top section: Route name and status
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -382,10 +365,9 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                             isRunning -> Strings.get("status_recording", language)
                             else -> Strings.get("status_ready", language)
                         }
-                        val statusColor by animateColorAsState(if (isRunning) Color(0xFFF44336) else Color.White)
+                        val statusColor by animateColorAsState(if (isRunning) Color(0xFFF44336) else Color.White, label = "statusColor")
                         Text(statusText, color = statusColor, fontSize = 16.sp)
                     }
-                    // Settings Menu (Language & Map Type)
                     SettingsMenu(
                         currentLang = language,
                         onLangChange = { language = it },
@@ -394,18 +376,16 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     )
                 }
 
-                // Bottom section: Timer, Speed, G-Force
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 32.dp else 12.dp)
                 ) {
-                    // Timer and Controls (Left Side)
                     Column(modifier = Modifier.weight(if (isLandscape) 1.5f else 1.3f)) {
                         Text(
                             text = formatMs(elapsedMs),
                             color = Color.White,
-                            fontSize = if (isLandscape) 40.sp else 48.sp, // Landscape mode uses slightly smaller font
+                            fontSize = if (isLandscape) 40.sp else 48.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             softWrap = false
@@ -434,7 +414,6 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         }
                     }
                     
-                    // Speed and G-Force (Right Side)
                     Row(
                         modifier = Modifier.weight(if (isLandscape) 1.5f else 0.7f),
                         horizontalArrangement = Arrangement.End,
@@ -476,7 +455,6 @@ internal fun SettingsMenu(
             onDismissRequest = { expanded = false },
             modifier = Modifier.background(Color.DarkGray)
         ) {
-            // Language Selection
             Text("Language", color = Color.Gray, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontSize = 12.sp)
             AppLanguage.entries.forEach { lang ->
                 DropdownMenuItem(
@@ -484,88 +462,42 @@ internal fun SettingsMenu(
                     onClick = { onLangChange(lang); expanded = false }
                 )
             }
-            
-            Divider(color = Color.Gray.copy(alpha = 0.5f))
-            
-            // Map Type Selection
+            Divider(color = Color.Gray)
             Text("Map Type", color = Color.Gray, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontSize = 12.sp)
-            DropdownMenuItem(
-                text = { Text("Satellite", color = if (currentMapType == MapType.SATELLITE) Color.Cyan else Color.White) },
-                onClick = { onMapTypeChange(MapType.SATELLITE); expanded = false }
-            )
             DropdownMenuItem(
                 text = { Text("Normal", color = if (currentMapType == MapType.NORMAL) Color.Cyan else Color.White) },
                 onClick = { onMapTypeChange(MapType.NORMAL); expanded = false }
+            )
+            DropdownMenuItem(
+                text = { Text("Satellite", color = if (currentMapType == MapType.SATELLITE) Color.Cyan else Color.White) },
+                onClick = { onMapTypeChange(MapType.SATELLITE); expanded = false }
             )
         }
     }
 }
 
 @Composable
-fun ControlButton(icon: ImageVector, text: String, onClick: () -> Unit) {
-    Button(onClick = onClick, colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.5f))) {
-        Icon(icon, contentDescription = text, tint = Color.White)
-        Spacer(Modifier.width(4.dp))
-        Text(text, color = Color.White)
-    }
+fun GateMarker(gate: Gate, label: String) {
+    Polyline(
+        points = listOf(LatLng(gate.a.lat, gate.a.lng), LatLng(gate.b.lat, gate.b.lng)),
+        color = Color.Green,
+        width = 15f
+    )
 }
 
 @Composable
 fun Speedometer(speedKmh: Float) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Text(
-            text = "%.0f".format(speedKmh),
-            color = Color.White,
-            fontSize = 72.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.End
-        )
-        Text(
-            text = "km/h",
-            color = Color.White,
-            fontSize = 24.sp,
-            modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
-        )
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("%.0f".format(speedKmh), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+        Text("km/h", color = Color.White, fontSize = 12.sp)
     }
 }
 
 @Composable
 fun GForceMeter(gX: Float, gY: Float) {
-    val maxG = 2.0f
-    val clampedGx = gX.coerceIn(-maxG, maxG)
-    val clampedGy = gY.coerceIn(-maxG, maxG)
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(120.dp)
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.5f))
-            .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape)
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) { 
-            val center = this.center
-            val radius = size.minDimension / 2.0f
-            
-            // Grid lines
-            drawLine(Color.White.copy(alpha = 0.3f), Offset(center.x, 0f), Offset(center.x, size.height), strokeWidth = 1f)
-            drawLine(Color.White.copy(alpha = 0.3f), Offset(0f, center.y), Offset(size.width, center.y), strokeWidth = 1f)
-            drawCircle(Color.White.copy(alpha = 0.3f), radius = radius / 2, style = Stroke(width = 1f))
-
-            // G-Force point
-            val pointOffset = Offset(
-                center.x + (clampedGx / maxG) * radius,
-                center.y - (clampedGy / maxG) * radius // Y is inverted in Canvas
-            )
-            drawCircle(Brush.radialGradient(listOf(Color.Red, Color.Transparent), center = pointOffset, radius = 8.dp.toPx()), radius = 8.dp.toPx(), center = pointOffset)
-        }
-        Text("G", color = Color.White.copy(alpha = 0.7f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    val totalG = sqrt(gX.pow(2) + gY.pow(2))
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("%.2f".format(totalG), color = Color(0xFFFFEB3B), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("G-Force", color = Color.White, fontSize = 10.sp)
     }
-}
-
-@Composable
-fun GateMarker(gate: Gate, title: String) {
-    val center = LatLng((gate.a.lat + gate.b.lat) / 2, (gate.a.lng + gate.b.lng) / 2)
-    Marker(state = MarkerState(position = center), title = title, snippet = "Gate")
-    Polyline(points = listOf(LatLng(gate.a.lat, gate.a.lng), LatLng(gate.b.lat, gate.b.lng)), color = Color.Yellow, width = 10f)
 }
