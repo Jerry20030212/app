@@ -12,12 +12,13 @@ class RouteRepository(context: Context) {
     // ------------------------------------------------
     suspend fun saveRoute(
         name: String,
+        vehicleModel: String,
         startGate: Gate?,
         customGates: List<Gate>,
         finishGate: Gate?
     ): Long {
         // 1️⃣ 先存 route
-        val routeId = dao.insertRoute(RouteEntity(name = name))
+        val routeId = dao.insertRoute(RouteEntity(name = name, vehicleModel = vehicleModel))
 
         // 2️⃣ 建立 gate 清單
         val gates = mutableListOf<GateEntity>()

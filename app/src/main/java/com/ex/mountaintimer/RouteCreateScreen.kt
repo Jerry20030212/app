@@ -58,8 +58,9 @@ fun RouteCreateScreen(
     // ---- 步驟 ----
     var step by remember { mutableStateOf(CreateStep.NAME) }
 
-    // ---- 路線名稱 ----
+    // ---- 路線名稱與車型 ----
     var routeName by remember { mutableStateOf("") }
+    var vehicleModel by remember { mutableStateOf("") }
 
     // ---- Gate 編輯狀態 ----
     var editTarget by remember { mutableStateOf(EditTarget.START) }
@@ -137,6 +138,7 @@ fun RouteCreateScreen(
         scope.launch {
             repo.saveRoute(
                 name = routeName.trim(),
+                vehicleModel = vehicleModel.trim(),
                 startGate = startGate,
                 customGates = customGates.toList(),
                 finishGate = finishGate
@@ -195,6 +197,15 @@ fun RouteCreateScreen(
                         onValueChange = { routeName = it },
                         label = { Text("路線名稱") },
                         placeholder = { Text("例：陽明山仰德大道") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = vehicleModel,
+                        onValueChange = { vehicleModel = it },
+                        label = { Text("車型") },
+                        placeholder = { Text("例：Yamaha YZF-R3") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )

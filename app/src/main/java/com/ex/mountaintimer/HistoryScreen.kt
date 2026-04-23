@@ -110,7 +110,7 @@ fun HistoryScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    dateFormat.format(Date(run.startTimeEpoch)),
+                                    dateFormat.format(Date(run.startTimeEpoch)) + (if (run.vehicleModel.isNotBlank()) " | ${run.vehicleModel}" else ""),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

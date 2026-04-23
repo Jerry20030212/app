@@ -17,5 +17,8 @@ data class RunResultEntity(
     val routeName: String,
     val startTimeEpoch: Long,     // 開始時間（epoch ms）
     val endTimeEpoch: Long,       // 結束時間（epoch ms）
-    val totalTimeMs: Long         // 總耗時（ms）
+    val totalTimeMs: Long,        // 總耗時（ms）
+    val vehicleModel: String = "", // 車型
+    val totalDistanceM: Double = 0.0, // 總距離 (公尺)
+    val averageSpeedKmh: Double = 0.0 // 平均速度 (km/h)
 )

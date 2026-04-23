@@ -176,6 +176,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
     var lastDistanceToStart by remember { mutableDoubleStateOf(Double.MAX_VALUE) }
     var passedCustomGateIndices by remember { mutableStateOf(setOf<Int>()) }
     val splitTimes = remember { mutableStateListOf<SplitTimeEntity>() }
+    var totalDistanceM by remember { mutableDoubleStateOf(0.0) }
+    var vehicleModel by remember { mutableStateOf("") }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         hasPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true
@@ -194,6 +196,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
         val r = if (selectedRouteId == null) null else routeRepo.getRouteWithGates(selectedRouteId)
         if (r != null) {
             routeName = r.route.name
+            vehicleModel = r.route.vehicleModel
             startGate = null; customGates.clear(); finishGate = null
             r.gates.forEach { g ->
                 val gate = Gate(GeoPoint(g.aLat, g.aLng), GeoPoint(g.bLat, g.bLng))
@@ -203,7 +206,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     "FINISH" -> finishGate = gate
                 }
             }
-            isRunning = false; trackPoints.clear(); lastDistanceToStart = Double.MAX_VALUE; passedCustomGateIndices = emptySet()
+            isRunning = false; trackPoints.clear(); lastDistanceToStart = Double.MAX_VALUE; passedCustomGateIndices = emptySet(); totalDistanceM = 0.0
         }
     }
 
@@ -239,14 +242,19 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
 
                 if (!isRunning && prev != null && isCrossingGate(prev, curr, gSA, gSB)) {
                     isRunning = true; startedAtMs = System.currentTimeMillis()
-                    trackPoints.clear(); trackPoints.add(curr); passedCustomGateIndices = emptySet(); splitTimes.clear()
+                    trackPoints.clear(); trackPoints.add(curr); passedCustomGateIndices = emptySet(); splitTimes.clear(); totalDistanceM = 0.0
                     speak("timing_start")
                     // Log start data
                     splitTimes.add(SplitTimeEntity(runId = 0, checkpointIndex = 0, checkpointName = "START", timeMs = 0, speed = p.speed.toDouble(), gForce = sqrt(p.gX.toDouble().pow(2) + p.gY.toDouble().pow(2))))
                 }
 
                 if (isRunning) {
-                    if (trackPoints.isEmpty() || trackPoints.last() != curr) trackPoints.add(curr)
+                    if (trackPoints.isEmpty() || trackPoints.last() != curr) {
+                        if (trackPoints.isNotEmpty()) {
+                            totalDistanceM += calculateDistance(trackPoints.last(), curr)
+                        }
+                        trackPoints.add(curr)
+                    }
                     
                     // Custom gate detection
                     customGates.forEachIndexed { index, gate ->
@@ -266,9 +274,8 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     }
 
                     // Finish gate detection
-                    if (prev != null && isCrossingGate(prev, curr, gFA, gFB)) {
+                    if (prev != null && isCrossingGate(p                        val finalMs = System.currentTimeMillis() - startedAtMs
                         isRunning = false
-                        val finalMs = System.currentTimeMillis() - startedAtMs
                         speak("passed_finish")
                         splitTimes.add(SplitTimeEntity(
                             runId = 0, 
@@ -279,17 +286,20 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                             gForce = sqrt(p.gX.toDouble().pow(2) + p.gY.toDouble().pow(2))
                         ))
                         scope.launch {
+                            val avgSpeed = if (finalMs > 0) (totalDistanceM / (finalMs / 1000.0)) * 3.6 else 0.0
                             historyRepo.saveRunResult(
                                 routeId = selectedRouteId ?: 0L,
                                 routeName = routeName,
+                                vehicleModel = vehicleModel,
                                 startTimeEpoch = startedAtMs,
                                 endTimeEpoch = System.currentTimeMillis(),
                                 totalTimeMs = finalMs,
+                                totalDistanceM = totalDistanceM,
+                                averageSpeedKmh = avgSpeed,
                                 splits = splitTimes.toList(),
-                                trackPoints = trackPoints.map { TrackPointEntity(runId = 0, lat = it.latitude, lng = it.longitude, timestampMs = 0) }
+                                trackPoints = trackPoints.map { TrackPointEntity(runId = 0, lat = it.latitude, lng = it.longitude, timestampMs = System.currentTimeMillis()) }
                             )
-                        }
-                    }
+                        }                    }
                 }
             }
         }
@@ -392,16 +402,32 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         Text(
                             text = formatMs(elapsedMs),
                             color = Color.White,
-                            fontSize = 48.sp, // Reduced from 56 to 48
+                            fontSize = 48.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             softWrap = false
                         )
                         Spacer(Modifier.height(12.dp))
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            ControlButton(Icons.AutoMirrored.Filled.List, Strings.get("btn_routes", language)) { onOpenRouteList() }
-                            Spacer(Modifier.width(8.dp))
-                            ControlButton(Icons.Default.History, Strings.get("btn_history", language)) { onOpenHistory() }
+                            IconButton(
+                                onClick = onOpenRouteList,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.5f))
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Routes", tint = Color.White)
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            IconButton(
+                                onClick = onOpenHistory,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.5f))
+                            ) {
+                                Icon(Icons.Default.History, contentDescription = "History", tint = Color.White)
+                            }
                         }
                     }
                     

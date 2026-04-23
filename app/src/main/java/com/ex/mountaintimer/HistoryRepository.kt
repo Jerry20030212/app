@@ -34,9 +34,12 @@ class HistoryRepository(context: Context) {
     suspend fun saveRunResult(
         routeId: Long,
         routeName: String,
+        vehicleModel: String,
         startTimeEpoch: Long,
         endTimeEpoch: Long,
         totalTimeMs: Long,
+        totalDistanceM: Double,
+        averageSpeedKmh: Double,
         splits: List<SplitTimeEntity>,
         trackPoints: List<TrackPointEntity>
     ): Long {
@@ -44,9 +47,12 @@ class HistoryRepository(context: Context) {
             RunResultEntity(
                 routeId = routeId,
                 routeName = routeName,
+                vehicleModel = vehicleModel,
                 startTimeEpoch = startTimeEpoch,
                 endTimeEpoch = endTimeEpoch,
-                totalTimeMs = totalTimeMs
+                totalTimeMs = totalTimeMs,
+                totalDistanceM = totalDistanceM,
+                averageSpeedKmh = averageSpeedKmh
             )
         )
 

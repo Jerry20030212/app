@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
         SplitTimeEntity::class,
         TrackPointEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

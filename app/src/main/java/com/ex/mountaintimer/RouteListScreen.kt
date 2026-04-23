@@ -116,7 +116,7 @@ fun RouteListScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    "自訂點: $customCount 個",
+                                    "自訂點: $customCount 個" + (if (route.vehicleModel.isNotBlank()) " | 車型: ${route.vehicleModel}" else ""),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
