@@ -183,7 +183,6 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
     var vehicleModel by remember { mutableStateOf("") }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        // Android 12+ requires handling both fine and coarse location
         hasPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true || 
                         result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     }
@@ -364,7 +363,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically // Align items horizontally centered
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                         Text(routeName, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -383,18 +382,19 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         onMapTypeChange = { mapType = it },
                         onReportIssue = { showReportDialog = true }
                     )
-                      Row(
+                }
+
+                Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.SpaceBetween // Push timer and meters to edges
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Timer and Controls (Left Side)
-                    Column(modifier = Modifier.wrapContentWidth()) { // Don't restrict width
+                    Column(modifier = Modifier.wrapContentWidth()) {
                         Text(
                             text = formatMs(elapsedMs),
                             color = Color.White,
                             fontSize = if (isLandscape) 40.sp else 48.sp,
-                            fontWeight = FontWeight.Black, // Heavier font for better visibility
+                            fontWeight = FontWeight.Black,
                             maxLines = 1,
                             softWrap = false
                         )
@@ -423,7 +423,7 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     }
                     
                     Row(
-                        modifier = Modifier.wrapContentWidth(), // Let it take only what it needs
+                        modifier = Modifier.wrapContentWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.Bottom
                     ) {
@@ -438,7 +438,6 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
             ReportIssueDialog(
                 onDismiss = { showReportDialog = false },
                 onSubmit = { issue ->
-                    // Here you would typically send to Firebase
                     android.widget.Toast.makeText(context, "Issue reported: $issue", android.widget.Toast.LENGTH_LONG).show()
                     showReportDialog = false
                 }
@@ -546,7 +545,7 @@ fun Speedometer(speedKmh: Float) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(90.dp) // Fixed width to prevent stretching
+            .width(90.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color.Black.copy(alpha = 0.4f))
             .padding(vertical = 8.dp, horizontal = 4.dp)
@@ -573,50 +572,29 @@ fun GForceMeter(gX: Float, gY: Float) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(90.dp) // Fixed width to prevent stretching
+            .width(90.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color.Black.copy(alpha = 0.4f))
             .padding(vertical = 8.dp, horizontal = 4.dp)
     ) {
-        // G-Ball Visualization (Ensured to be square/circle)
         Box(
             modifier = Modifier
-                .size(60.dp) // Slightly larger and fixed size
+                .size(60.dp)
                 .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val center = Offset(size.width / 2, size.height / 2)
                 val radius = size.width / 2
-                
-                // Grid lines
                 drawLine(Color.White.copy(alpha = 0.1f), Offset(0f, center.y), Offset(size.width, center.y))
                 drawLine(Color.White.copy(alpha = 0.1f), Offset(center.x, 0f), Offset(center.x, size.height))
-                
-                // Dynamic G-Dot
-                // Scale: 2G = Edge of circle
                 val dotX = (center.x + (gX / 2.0f) * radius).coerceIn(0f, size.width)
                 val dotY = (center.y + (gY / 2.0f) * radius).coerceIn(0f, size.height)
-                
-                drawCircle(
-                    color = Color(0xFFFF5252),
-                    radius = 4.dp.toPx(),
-                    center = Offset(dotX, dotY)
-                )
+                drawCircle(color = Color(0xFFFF5252), radius = 4.dp.toPx(), center = Offset(dotX, dotY))
             }
         }
         Spacer(Modifier.height(4.dp))
-        Text(
-            "%.2f".format(totalG),
-            color = Color(0xFFFFEB3B),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            "G-Force",
-            color = Color.White.copy(alpha = 0.8f),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text("%.2f".format(totalG), color = Color(0xFFFFEB3B), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("G-Force", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
