@@ -424,12 +424,12 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                     }
                     
                     Row(
-                        modifier = Modifier.weight(if (isLandscape) 1.5f else 0.7f),
+                        modifier = Modifier.weight(if (isLandscape) 1.5f else 0.8f),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.Bottom
                     ) {
                         Speedometer(speedKmh = currentPoint?.speed?.times(3.6)?.toFloat() ?: 0f)
-                        if (isLandscape) Spacer(Modifier.width(24.dp)) else Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.width(if (isLandscape) 32.dp else 20.dp))
                         GForceMeter(gX = currentPoint?.gX ?: 0f, gY = currentPoint?.gY ?: 0f)
                     }
                 }
@@ -545,17 +545,80 @@ fun GateMarker(gate: Gate, label: String) {
 
 @Composable
 fun Speedometer(speedKmh: Float) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("%.0f".format(speedKmh), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-        Text("km/h", color = Color.White, fontSize = 12.sp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(80.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.Black.copy(alpha = 0.3f))
+            .padding(4.dp)
+    ) {
+        Text(
+            "%.0f".format(speedKmh),
+            color = if (speedKmh > 200) Color(0xFFFF5252) else Color.White,
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            "km/h",
+            color = Color.White.copy(alpha = 0.8f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
 @Composable
 fun GForceMeter(gX: Float, gY: Float) {
     val totalG = sqrt(gX.pow(2) + gY.pow(2))
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("%.2f".format(totalG), color = Color(0xFFFFEB3B), fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text("G-Force", color = Color.White, fontSize = 10.sp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(80.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.Black.copy(alpha = 0.3f))
+            .padding(4.dp)
+    ) {
+        // G-Ball Visualization
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val center = Offset(size.width / 2, size.height / 2)
+                val radius = size.width / 2
+                
+                // Grid lines
+                drawLine(Color.White.copy(alpha = 0.1f), Offset(0f, center.y), Offset(size.width, center.y))
+                drawLine(Color.White.copy(alpha = 0.1f), Offset(center.x, 0f), Offset(center.x, size.height))
+                
+                // Dynamic G-Dot
+                // Scale: 2G = Edge of circle
+                val dotX = (center.x + (gX / 2.0f) * radius).coerceIn(0f, size.width)
+                val dotY = (center.y + (gY / 2.0f) * radius).coerceIn(0f, size.height)
+                
+                drawCircle(
+                    color = Color(0xFFFF5252),
+                    radius = 4.dp.toPx(),
+                    center = Offset(dotX, dotY)
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "%.2f".format(totalG),
+            color = Color(0xFFFFEB3B),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "G-Force",
+            color = Color.White.copy(alpha = 0.8f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
