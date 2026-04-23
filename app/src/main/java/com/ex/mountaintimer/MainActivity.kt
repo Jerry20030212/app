@@ -24,7 +24,8 @@ class MainActivity : ComponentActivity() {
         ROUTE_LIST,
         ROUTE_CREATE,
         HISTORY,
-        HISTORY_DETAIL
+        HISTORY_DETAIL,
+        HISTORY_COMPARISON
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
                 var screen by rememberSaveable { mutableStateOf(Screen.MAP) }
                 var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
                 var selectedHistoryId by rememberSaveable { mutableStateOf<Long?>(null) }
+                var selectedComparisonIds by remember { mutableStateOf<List<Long>>(emptyList()) }
 
                 when (screen) {
                     Screen.MAP -> {
@@ -69,6 +71,10 @@ class MainActivity : ComponentActivity() {
                             onOpenDetail = { runId ->
                                 selectedHistoryId = runId
                                 screen = Screen.HISTORY_DETAIL
+                            },
+                            onOpenComparison = { ids ->
+                                selectedComparisonIds = ids
+                                screen = Screen.HISTORY_COMPARISON
                             }
                         )
                     }
@@ -76,6 +82,13 @@ class MainActivity : ComponentActivity() {
                     Screen.HISTORY_DETAIL -> {
                         HistoryDetailScreen(
                             runId = selectedHistoryId ?: 0L,
+                            onBack = { screen = Screen.HISTORY }
+                        )
+                    }
+
+                    Screen.HISTORY_COMPARISON -> {
+                        HistoryComparisonScreen(
+                            runIds = selectedComparisonIds,
                             onBack = { screen = Screen.HISTORY }
                         )
                     }
