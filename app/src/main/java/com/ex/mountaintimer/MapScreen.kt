@@ -364,9 +364,9 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically // Align items horizontally centered
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                         Text(routeName, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         val statusText = when {
                             selectedRouteId == null -> Strings.get("hint_select", language)
@@ -383,24 +383,23 @@ fun MapScreen(selectedRouteId: Long?, onOpenRouteList: () -> Unit, onOpenHistory
                         onMapTypeChange = { mapType = it },
                         onReportIssue = { showReportDialog = true }
                     )
-                }
-
-                Row(
+                      Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 32.dp else 12.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween // Push timer and meters to edges
                 ) {
-                    Column(modifier = Modifier.weight(if (isLandscape) 1.5f else 1.3f)) {
+                    // Timer and Controls (Left Side)
+                    Column(modifier = Modifier.wrapContentWidth()) { // Don't restrict width
                         Text(
                             text = formatMs(elapsedMs),
                             color = Color.White,
                             fontSize = if (isLandscape) 40.sp else 48.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Black, // Heavier font for better visibility
                             maxLines = 1,
                             softWrap = false
                         )
                         Spacer(Modifier.height(if (isLandscape) 4.dp else 12.dp))
-                        Row(modifier = Modifier.fillMaxWidth()) {
+                        Row(modifier = Modifier.wrapContentWidth()) {
                             IconButton(
                                 onClick = onOpenRouteList,
                                 modifier = Modifier
